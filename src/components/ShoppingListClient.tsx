@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   shoppingSearchUrl,
@@ -20,6 +20,23 @@ export function ShoppingListClient({
 }) {
   const [items, setItems] = useState(initialItems);
   const [manualName, setManualName] = useState("");
+  const [coupangLinks, setCoupangLinks] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const urls = items.map((item) => shoppingSearchUrl("coupang", item.name));
+    if (urls.length === 0) return;
+    fetch("/api/shopping/coupang-links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ urls }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.links) setCoupangLinks(data.links);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.map((i) => i.name).join("|")]);
 
   async function persist(next: ShoppingItem[]) {
     setItems(next);
@@ -109,17 +126,24 @@ export function ShoppingListClient({
               )}
             </div>
             <div className="flex gap-1.5">
-              {SITES.map((site) => (
-                <a
-                  key={site}
-                  href={shoppingSearchUrl(site, item.name)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-full border border-card-border bg-card px-2 py-1 text-xs text-muted transition-colors hover:border-accent hover:text-accent"
-                >
-                  {SHOPPING_SITE_LABELS[site]}
-                </a>
-              ))}
+              {SITES.map((site) => {
+                const searchUrl = shoppingSearchUrl(site, item.name);
+                const href =
+                  site === "coupang"
+                    ? (coupangLinks[searchUrl] ?? searchUrl)
+                    : searchUrl;
+                return (
+                  <a
+                    key={site}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full border border-card-border bg-card px-2 py-1 text-xs text-muted transition-colors hover:border-accent hover:text-accent"
+                  >
+                    {SHOPPING_SITE_LABELS[site]}
+                  </a>
+                );
+              })}
             </div>
             <button
               onClick={() => remove(i)}
