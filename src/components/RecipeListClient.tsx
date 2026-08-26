@@ -14,6 +14,9 @@ export function RecipeListClient({ recipes: initialRecipes }: { recipes: Recipe[
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>("전체");
   const [recategorizing, setRecategorizing] = useState(false);
   const [recategorizeError, setRecategorizeError] = useState("");
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -95,6 +98,41 @@ export function RecipeListClient({ recipes: initialRecipes }: { recipes: Recipe[
     }
   }
 
+  function toggleSelectMode() {
+    setSelectMode((v) => !v);
+    setSelectedIds(new Set());
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAllFiltered() {
+    setSelectedIds(new Set(filtered.map((r) => r.id)));
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`선택한 ${selectedIds.size}개 레시피를 삭제할까요? 되돌릴 수 없어요.`)) return;
+    setBulkDeleting(true);
+    const ids = Array.from(selectedIds);
+    const supabase = createClient();
+    const { error } = await supabase.from("recipes").delete().in("id", ids);
+    setBulkDeleting(false);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    setRecipes((prev) => prev.filter((r) => !selectedIds.has(r.id)));
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }
+
   if (recipes.length === 0) {
     return (
       <p className="rounded-2xl border border-dashed border-card-border p-6 text-center text-sm text-muted">
@@ -120,9 +158,42 @@ export function RecipeListClient({ recipes: initialRecipes }: { recipes: Recipe[
         >
           {recategorizing ? "분류 중..." : "AI로 자동 분류"}
         </button>
+        <button
+          onClick={toggleSelectMode}
+          className={`shrink-0 rounded-full border px-3 py-2 text-xs font-medium shadow-sm transition-colors ${
+            selectMode
+              ? "border-accent bg-accent text-accent-foreground"
+              : "border-card-border bg-card hover:border-accent hover:text-accent"
+          }`}
+        >
+          {selectMode ? "선택 취소" : "여러개 선택"}
+        </button>
       </div>
       {recategorizeError && (
         <p className="text-sm text-red-600">{recategorizeError}</p>
+      )}
+
+      {selectMode && (
+        <div className="flex items-center justify-between rounded-2xl border border-card-border bg-card px-4 py-2.5 shadow-sm">
+          <span className="text-xs font-medium text-muted">
+            {selectedIds.size}개 선택됨
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={selectAllFiltered}
+              className="text-xs font-medium text-accent hover:text-accent-hover"
+            >
+              전체 선택
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={selectedIds.size === 0 || bulkDeleting}
+              className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-red-700 disabled:opacity-40"
+            >
+              {bulkDeleting ? "삭제 중..." : "선택 삭제"}
+            </button>
+          </div>
+        </div>
       )}
 
       <div className="flex flex-wrap gap-2">
@@ -150,12 +221,10 @@ export function RecipeListClient({ recipes: initialRecipes }: { recipes: Recipe[
         </p>
       ) : (
         <ul className="grid grid-cols-2 gap-3">
-          {filtered.map((r) => (
-            <li key={r.id} className="relative">
-              <Link
-                href={`/recipes/${r.id}`}
-                className="flex flex-col gap-1 rounded-2xl border border-card-border bg-card p-4 pr-10 shadow-sm transition-colors hover:border-accent"
-              >
+          {filtered.map((r) => {
+            const selected = selectedIds.has(r.id);
+            const cardInner = (
+              <>
                 <span className="flex items-center gap-1.5 text-sm font-semibold">
                   <span>🍽️</span> {r.title}
                 </span>
@@ -165,31 +234,70 @@ export function RecipeListClient({ recipes: initialRecipes }: { recipes: Recipe[
                   </span>
                   재료 {r.ingredients.length}개
                 </span>
-              </Link>
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  toggleFavorite(r.id, r.is_favorite);
-                }}
-                title={r.is_favorite ? "즐겨찾기 해제" : "즐겨찾기에 추가"}
-                className="absolute top-3 right-3 text-lg leading-none"
-              >
-                {r.is_favorite ? "⭐" : "☆"}
-              </button>
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleDelete(r.id, r.title);
-                }}
-                title="레시피 삭제"
-                className="absolute bottom-3 right-3 text-sm leading-none text-muted hover:text-red-600"
-              >
-                🗑️
-              </button>
-            </li>
-          ))}
+              </>
+            );
+
+            return (
+              <li key={r.id} className="relative">
+                {selectMode ? (
+                  <button
+                    onClick={() => toggleSelected(r.id)}
+                    className={`flex w-full flex-col gap-1 rounded-2xl border p-4 pr-10 text-left shadow-sm transition-colors ${
+                      selected
+                        ? "border-accent bg-accent-soft"
+                        : "border-card-border bg-card hover:border-accent"
+                    }`}
+                  >
+                    {cardInner}
+                  </button>
+                ) : (
+                  <Link
+                    href={`/recipes/${r.id}`}
+                    className="flex flex-col gap-1 rounded-2xl border border-card-border bg-card p-4 pr-10 shadow-sm transition-colors hover:border-accent"
+                  >
+                    {cardInner}
+                  </Link>
+                )}
+
+                {selectMode ? (
+                  <span
+                    className={`absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full border text-xs ${
+                      selected
+                        ? "border-accent bg-accent text-accent-foreground"
+                        : "border-card-border bg-card"
+                    }`}
+                  >
+                    {selected ? "✓" : ""}
+                  </span>
+                ) : (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleFavorite(r.id, r.is_favorite);
+                      }}
+                      title={r.is_favorite ? "즐겨찾기 해제" : "즐겨찾기에 추가"}
+                      className="absolute top-3 right-3 text-lg leading-none"
+                    >
+                      {r.is_favorite ? "⭐" : "☆"}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDelete(r.id, r.title);
+                      }}
+                      title="레시피 삭제"
+                      className="absolute bottom-3 right-3 text-sm leading-none text-muted hover:text-red-600"
+                    >
+                      🗑️
+                    </button>
+                  </>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
