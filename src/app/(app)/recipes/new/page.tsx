@@ -96,6 +96,7 @@ export default function NewRecipePage() {
   const [ytResults, setYtResults] = useState<YoutubeVideoResult[]>([]);
   const [ytSearching, setYtSearching] = useState(false);
   const [ytSearchError, setYtSearchError] = useState("");
+  const [analyzingVideoId, setAnalyzingVideoId] = useState<string | null>(null);
 
   function switchMode(next: Mode) {
     setMode(next);
@@ -105,6 +106,7 @@ export default function NewRecipePage() {
     setGenerateError("");
     setYtResults([]);
     setYtSearchError("");
+    setAnalyzingVideoId(null);
   }
 
   async function handleSearch(e: React.FormEvent) {
@@ -195,10 +197,12 @@ export default function NewRecipePage() {
     }
   }
 
-  function handleSelectYoutubeVideo(videoId: string) {
+  async function handleSelectYoutubeVideo(videoId: string) {
     const url = `https://www.youtube.com/watch?v=${videoId}`;
     setYoutubeUrl(url);
-    void extractFromUrl(url);
+    setAnalyzingVideoId(videoId);
+    await extractFromUrl(url);
+    setAnalyzingVideoId(null);
   }
 
   return (
@@ -354,7 +358,7 @@ export default function NewRecipePage() {
                     disabled={generating}
                     className="shrink-0 rounded-full border border-card-border px-3 py-1.5 text-xs font-medium hover:border-accent hover:text-accent disabled:opacity-50"
                   >
-                    {generating ? "분석 중..." : "선택하기"}
+                    {analyzingVideoId === v.videoId ? "분석 중..." : "선택하기"}
                   </button>
                 </li>
               ))}
