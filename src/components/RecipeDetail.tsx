@@ -4,7 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { RecipeForm } from "@/components/RecipeForm";
-import type { Recipe } from "@/types/database";
+import { formatDate, getWeekStart } from "@/lib/dates";
+import type { Recipe, ShoppingItem } from "@/types/database";
+
+function itemKey(i: { name: string; unit: string | null }): string {
+  return `${i.name.trim()}__${(i.unit ?? "").trim()}`;
+}
 
 export function RecipeDetail({ recipe }: { recipe: Recipe }) {
   const router = useRouter();
@@ -12,6 +17,67 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
   const [isFavorite, setIsFavorite] = useState(recipe.is_favorite);
   const [togglingFavorite, setTogglingFavorite] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [cartMessage, setCartMessage] = useState("");
+  const [cartError, setCartError] = useState(false);
+
+  async function addToShoppingList() {
+    setAddingToCart(true);
+    setCartMessage("");
+    setCartError(false);
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setAddingToCart(false);
+      return;
+    }
+
+    const weekStartStr = formatDate(getWeekStart(new Date()));
+    const { data: existing } = await supabase
+      .from("shopping_lists")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("week_start_date", weekStartStr)
+      .maybeSingle();
+
+    const existingItems: ShoppingItem[] = existing?.items ?? [];
+    const existingKeys = new Set(existingItems.map(itemKey));
+
+    const newItems: ShoppingItem[] = recipe.ingredients
+      .filter((ing) => !existingKeys.has(itemKey(ing)))
+      .map((ing) => ({
+        name: ing.name,
+        amount: ing.amount,
+        unit: ing.unit,
+        checked: false,
+        manual: true,
+      }));
+
+    if (newItems.length === 0) {
+      setAddingToCart(false);
+      setCartMessage("이미 이번 주 장보기 리스트에 다 있어요.");
+      return;
+    }
+
+    const { error } = await supabase.from("shopping_lists").upsert(
+      {
+        user_id: user.id,
+        week_start_date: weekStartStr,
+        items: [...existingItems, ...newItems],
+      },
+      { onConflict: "user_id,week_start_date" },
+    );
+
+    setAddingToCart(false);
+    if (error) {
+      setCartError(true);
+      setCartMessage(error.message);
+      return;
+    }
+    setCartMessage(`재료 ${newItems.length}개를 이번 주 장보기 리스트에 담았어요!`);
+  }
 
   async function handleDelete() {
     if (!confirm("이 레시피를 삭제할까요? 되돌릴 수 없어요.")) return;
@@ -111,7 +177,16 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
       )}
 
       <section className="rounded-2xl border border-card-border bg-card p-4 shadow-sm">
-        <h2 className="mb-2 text-xs font-semibold text-accent">재료</h2>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-xs font-semibold text-accent">재료</h2>
+          <button
+            onClick={addToShoppingList}
+            disabled={addingToCart}
+            className="btn-3d rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-50"
+          >
+            {addingToCart ? "담는 중..." : "🛒 장바구니에 담기"}
+          </button>
+        </div>
         <ul className="flex flex-col gap-1 text-sm">
           {recipe.ingredients.map((ing, i) => (
             <li key={i} className="flex justify-between border-b border-card-border py-1 last:border-none">
@@ -122,6 +197,11 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
             </li>
           ))}
         </ul>
+        {cartMessage && (
+          <p className={`mt-2 text-xs ${cartError ? "text-red-600" : "text-success"}`}>
+            {cartMessage}
+          </p>
+        )}
       </section>
 
       {recipe.instructions.length > 0 && (
