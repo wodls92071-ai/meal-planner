@@ -15,7 +15,7 @@ const TOOLS = [
       {
         name: "add_dish",
         description:
-          "특정 날짜에 요리를 하나 추가한다 (기존에 그 날 배치된 다른 요리는 그대로 두고 추가만 함). 하루에 메인요리 + 반찬처럼 여러 개를 추가할 수 있다. 이미 저장된 레시피를 재사용하려면 recipe_id만 넘기고, 새 요리를 제안하는 거면 recipe_id 없이 title/ingredients/instructions를 채운다. 응답에 생성된 recipe_id가 포함되니, 같은 요리를 다른 날에도 이어서 배치할 때는(예: 이틀 나눠 먹기) 새로 만들지 말고 그 recipe_id를 재사용하세요.",
+          "특정 날짜에 요리를 하나 추가한다 (기존에 그 날 배치된 다른 요리는 그대로 두고 추가만 함). 하루에 메인요리 + 반찬처럼 여러 개를 추가할 수 있다. 이미 저장된 레시피를 재사용하려면 recipe_id만 넘기고, 새 요리를 제안하는 거면 recipe_id 없이 title/ingredients/instructions를 채운다. 응답에 생성된 recipe_id가 포함되니, 같은 요리를 다른 날에도 이어서 배치할 때는(예: 이틀 나눠 먹기) 새로 만들지 말고 그 recipe_id를 재사용하세요. 새로 제안하는 요리의 instructions는 단계 수를 아끼지 말고 최대한 자세히 적는다 — 각 단계마다 시간/불세기/재료 상태 변화를 구체적으로 넣어서 처음 요리하는 사람도 그대로 따라할 수 있게 한다.",
         parameters: {
           type: "OBJECT",
           properties: {
