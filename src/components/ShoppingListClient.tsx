@@ -9,7 +9,7 @@ import {
 } from "@/lib/shopping/links";
 import type { ShoppingItem } from "@/types/database";
 
-const SITES: ShoppingSite[] = ["coupang", "kurly", "naver"];
+const SITES: ShoppingSite[] = ["coupang"];
 
 export function ShoppingListClient({
   listId,
