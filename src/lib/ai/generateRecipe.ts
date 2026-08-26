@@ -1,6 +1,7 @@
 import "server-only";
 import type { Ingredient, RecipeCategory } from "@/types/database";
 import { RECIPE_CATEGORIES } from "@/lib/recipes/categories";
+import { extractYoutubeVideoId, getTopComments } from "@/lib/youtube/search";
 
 export type GeneratedRecipe = {
   title: string;
@@ -111,12 +112,22 @@ export async function extractRecipeFromYoutube(
     throw new Error("올바른 유튜브 링크가 아니에요.");
   }
 
+  const videoId = extractYoutubeVideoId(trimmed);
+  const comments = videoId ? await getTopComments(videoId) : [];
+  const commentsBlock =
+    comments.length > 0
+      ? `\n\n참고로 이 영상의 댓글 중 관련될 수 있는 내용이에요 (댓글 작성자가 재료/분량/조리순서를 텍스트로 정리해둔 경우가 많으니, 영상 속 장면과 맞으면 우선적으로 참고하세요. 영상 내용과 안 맞는 댓글은 무시하세요):\n${comments
+          .slice(0, 15)
+          .map((c, i) => `${i + 1}. ${c.replace(/\n+/g, " ").slice(0, 500)}`)
+          .join("\n")}`
+      : "";
+
   const prompt = `이 요리 영상을 보고 레시피를 정리해줘. 요리 이름, 실제 사용된 재료(이름/수량/단위), 조리 순서를 빠짐없이 뽑아줘.
 
 중요:
 - 영상에서 실제로 화면에 나오거나 말로 언급된 재료만 적어. 이 요리에 "보통 이런 재료가 들어간다"고 추측해서 안 나온 재료를 추가하지 마.
 - 화면에 잠깐이라도 나오지 않고 언급도 안 된 재료는 절대 넣지 마. 확신이 안 서면 빼는 쪽을 택해.
-- 조리 순서는 영상에서 보여준 대로 단계를 나누지 말고 최대한 잘게, 자세히 적어. 각 단계마다 영상에 나온 시간(예: 3분간), 불세기(강불/중불/약불), 재료의 상태 변화(예: 양파가 투명해질 때까지)를 구체적으로 넣어서, 영상을 안 봐도 그대로 따라할 수 있게 해줘.
+- 조리 순서는 영상에서 보여준 대로 단계를 나누지 말고 최대한 잘게, 자세히 적어. 각 단계마다 영상에 나온 시간(예: 3분간), 불세기(강불/중불/약불), 재료의 상태 변화(예: 양파가 투명해질 때까지)를 구체적으로 넣어서, 영상을 안 봐도 그대로 따라할 수 있게 해줘.${commentsBlock}
 
 요리 영상이 아니라면 title에 '요리 영상이 아닙니다'라고 적고 나머지는 빈 배열로 줘.`;
 
