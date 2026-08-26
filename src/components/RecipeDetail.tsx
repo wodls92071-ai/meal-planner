@@ -105,9 +105,7 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
     setTogglingFavorite(false);
     if (error) {
       setIsFavorite(!next);
-      return;
     }
-    router.refresh();
   }
 
   if (editing) {
