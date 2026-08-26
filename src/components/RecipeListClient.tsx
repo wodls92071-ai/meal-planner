@@ -83,6 +83,18 @@ export function RecipeListClient({ recipes: initialRecipes }: { recipes: Recipe[
     }
   }
 
+  async function handleDelete(id: string, title: string) {
+    if (!confirm(`"${title}" 레시피를 삭제할까요? 되돌릴 수 없어요.`)) return;
+    const prev = recipes;
+    setRecipes((cur) => cur.filter((r) => r.id !== id));
+    const supabase = createClient();
+    const { error } = await supabase.from("recipes").delete().eq("id", id);
+    if (error) {
+      setRecipes(prev);
+      alert(error.message);
+    }
+  }
+
   if (recipes.length === 0) {
     return (
       <p className="rounded-2xl border border-dashed border-card-border p-6 text-center text-sm text-muted">
@@ -164,6 +176,17 @@ export function RecipeListClient({ recipes: initialRecipes }: { recipes: Recipe[
                 className="absolute top-3 right-3 text-lg leading-none"
               >
                 {r.is_favorite ? "⭐" : "☆"}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleDelete(r.id, r.title);
+                }}
+                title="레시피 삭제"
+                className="absolute bottom-3 right-3 text-sm leading-none text-muted hover:text-red-600"
+              >
+                🗑️
               </button>
             </li>
           ))}

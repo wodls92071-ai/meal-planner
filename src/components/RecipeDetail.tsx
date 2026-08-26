@@ -11,6 +11,21 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
   const [editing, setEditing] = useState(false);
   const [isFavorite, setIsFavorite] = useState(recipe.is_favorite);
   const [togglingFavorite, setTogglingFavorite] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    if (!confirm("이 레시피를 삭제할까요? 되돌릴 수 없어요.")) return;
+    setDeleting(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("recipes").delete().eq("id", recipe.id);
+    if (error) {
+      setDeleting(false);
+      alert(error.message);
+      return;
+    }
+    router.push("/recipes");
+    router.refresh();
+  }
 
   async function toggleFavorite() {
     setTogglingFavorite(true);
@@ -75,6 +90,13 @@ export function RecipeDetail({ recipe }: { recipe: Recipe }) {
             className="rounded-full border border-card-border bg-card px-3 py-1.5 text-xs font-medium shadow-sm transition-colors hover:border-accent hover:text-accent"
           >
             수정
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="rounded-full border border-card-border bg-card px-3 py-1.5 text-xs font-medium text-red-600 shadow-sm transition-colors hover:border-red-400 disabled:opacity-50"
+          >
+            {deleting ? "삭제 중..." : "삭제"}
           </button>
         </div>
       </div>
