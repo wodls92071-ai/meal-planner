@@ -20,6 +20,9 @@ export async function updateSession(request: NextRequest) {
   }
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookieOptions: {
+      maxAge: 60 * 60 * 24 * 365, // 1년 — 브라우저를 완전히 종료해도 로그인 유지
+    },
     cookies: {
       getAll() {
         return request.cookies.getAll();
