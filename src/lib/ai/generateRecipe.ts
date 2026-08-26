@@ -41,6 +41,7 @@ const RECIPE_SCHEMA = {
 async function callGemini(
   parts: object[],
   temperature?: number,
+  model = "gemini-flash-latest",
 ): Promise<GeneratedRecipe> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -48,7 +49,7 @@ async function callGemini(
   }
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -120,6 +121,7 @@ export async function extractRecipeFromYoutube(
 
   return callGemini(
     [{ text: prompt }, { fileData: { fileUri: trimmed } }],
-    0.2,
+    0.1,
+    "gemini-pro-latest",
   );
 }
