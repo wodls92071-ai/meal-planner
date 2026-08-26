@@ -3,6 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { RecipeForm } from "@/components/RecipeForm";
+import {
+  SearchTabIcon,
+  SparkleTabIcon,
+  PlayTabIcon,
+  PencilTabIcon,
+} from "@/components/icons";
 import type { Ingredient, RecipeCategory } from "@/types/database";
 
 type ExternalResult = {
@@ -29,12 +35,37 @@ type YoutubeVideoResult = {
 
 type Mode = "search" | "ai" | "youtube" | "custom";
 
-const MODE_LABELS: Record<Mode, string> = {
-  search: "레시피 검색",
-  ai: "AI로 만들기",
-  youtube: "유튜브 영상으로",
-  custom: "직접 입력",
-};
+const MODE_TILES: {
+  mode: Mode;
+  label: string;
+  Icon: typeof SearchTabIcon;
+  className: string;
+}[] = [
+  {
+    mode: "search",
+    label: "레시피 검색",
+    Icon: SearchTabIcon,
+    className: "bg-accent text-accent-foreground",
+  },
+  {
+    mode: "ai",
+    label: "AI로 만들기",
+    Icon: SparkleTabIcon,
+    className: "bg-[#1b2464] text-white",
+  },
+  {
+    mode: "youtube",
+    label: "유튜브 영상으로",
+    Icon: PlayTabIcon,
+    className: "bg-[#5b7bf5] text-white",
+  },
+  {
+    mode: "custom",
+    label: "직접 입력",
+    Icon: PencilTabIcon,
+    className: "bg-accent-soft text-accent-soft-foreground",
+  },
+];
 
 export default function NewRecipePage() {
   const [mode, setMode] = useState<Mode>("search");
@@ -172,14 +203,19 @@ export default function NewRecipePage() {
         <h1 className="mt-1 text-xl font-bold">레시피 추가</h1>
       </div>
 
-      <div className="flex flex-wrap gap-4 border-b border-card-border text-sm">
-        {(Object.keys(MODE_LABELS) as Mode[]).map((m) => (
+      <div className="grid grid-cols-2 gap-3">
+        {MODE_TILES.map(({ mode: m, label, Icon, className }) => (
           <button
             key={m}
             onClick={() => switchMode(m)}
-            className={`pb-2 font-medium ${mode === m ? "border-b-2 border-accent text-accent" : "text-muted hover:text-accent"}`}
+            className={`flex flex-col items-start justify-between gap-4 rounded-3xl p-4 text-left shadow-sm transition-all ${className} ${
+              mode === m
+                ? "ring-2 ring-offset-2 ring-offset-background ring-accent"
+                : "opacity-80 hover:opacity-100 hover:-translate-y-0.5"
+            }`}
           >
-            {MODE_LABELS[m]}
+            <Icon size={26} strokeWidth={1.6} />
+            <span className="text-sm font-bold">{label}</span>
           </button>
         ))}
       </div>

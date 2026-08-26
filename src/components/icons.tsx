@@ -70,3 +70,39 @@ export function ProfileTabIcon(props: IconProps) {
     </Svg>
   );
 }
+
+export function SearchTabIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="M20 20l-4.8-4.8" />
+    </Svg>
+  );
+}
+
+export function SparkleTabIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 3.5c.6 3 2.2 4.6 5.2 5.2-3 .6-4.6 2.2-5.2 5.2-.6-3-2.2-4.6-5.2-5.2 3-.6 4.6-2.2 5.2-5.2Z" />
+      <path d="M18.5 15.5c.3 1.5 1.1 2.3 2.6 2.6-1.5.3-2.3 1.1-2.6 2.6-.3-1.5-1.1-2.3-2.6-2.6 1.5-.3 2.3-1.1 2.6-2.6Z" />
+    </Svg>
+  );
+}
+
+export function PlayTabIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M10 9l5 3-5 3V9Z" />
+    </Svg>
+  );
+}
+
+export function PencilTabIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M15 4.5 19.5 9 8 20.5 3.5 21l.5-4.5L15 4.5Z" />
+      <path d="M13 6.5 17.5 11" />
+    </Svg>
+  );
+}
