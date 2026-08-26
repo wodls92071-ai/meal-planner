@@ -98,6 +98,15 @@ export function PlayTabIcon(props: IconProps) {
   );
 }
 
+export function LinkTabIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M10 14a4 4 0 0 0 5.7.3l2.3-2.3a4 4 0 0 0-5.7-5.7l-1.3 1.3" />
+      <path d="M14 10a4 4 0 0 0-5.7-.3L6 12a4 4 0 0 0 5.7 5.7l1.3-1.3" />
+    </Svg>
+  );
+}
+
 export function PencilTabIcon(props: IconProps) {
   return (
     <Svg {...props}>

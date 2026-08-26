@@ -7,6 +7,7 @@ import {
   SearchTabIcon,
   SparkleTabIcon,
   PlayTabIcon,
+  LinkTabIcon,
   PencilTabIcon,
 } from "@/components/icons";
 import type { Ingredient, RecipeCategory } from "@/types/database";
@@ -33,7 +34,7 @@ type YoutubeVideoResult = {
   thumbnailUrl: string;
 };
 
-type Mode = "search" | "ai" | "youtube" | "custom";
+type Mode = "search" | "ai" | "youtube-search" | "youtube-link" | "custom";
 
 const MODE_TILES: {
   mode: Mode;
@@ -54,10 +55,16 @@ const MODE_TILES: {
     className: "bg-[#1b2464] text-white",
   },
   {
-    mode: "youtube",
-    label: "유튜브 영상으로",
+    mode: "youtube-search",
+    label: "유튜브 음식 검색",
     Icon: PlayTabIcon,
     className: "bg-[#5b7bf5] text-white",
+  },
+  {
+    mode: "youtube-link",
+    label: "유튜브 링크로 분석",
+    Icon: LinkTabIcon,
+    className: "bg-[#2952c8] text-white",
   },
   {
     mode: "custom",
@@ -297,91 +304,93 @@ export default function NewRecipePage() {
         </div>
       )}
 
-      {mode === "youtube" && !generated && (
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-4">
-            <p className="text-xs text-muted">
-              요리 이름을 검색하면 추천 유튜브 레시피 영상을 보여줘요.
-              &quot;선택하기&quot;를 누르면 Gemini가 그 영상을 보고 레시피를
-              정리해줘요.
-            </p>
-            <form onSubmit={handleYoutubeSearch} className="flex gap-2">
-              <input
-                value={ytQuery}
-                onChange={(e) => setYtQuery(e.target.value)}
-                placeholder="예: 된장찌개"
-                className="flex-1 rounded-xl border border-card-border bg-card px-3 py-2 text-sm"
-              />
-              <button
-                type="submit"
-                disabled={ytSearching}
-                className="rounded-full btn-3d bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-50"
-              >
-                {ytSearching ? "검색 중..." : "검색"}
-              </button>
-            </form>
-            {ytSearchError && (
-              <p className="text-sm text-red-600">{ytSearchError}</p>
-            )}
+      {mode === "youtube-search" && !generated && (
+        <div className="flex flex-col gap-4">
+          <p className="text-xs text-muted">
+            요리 이름을 검색하면 추천 유튜브 레시피 영상을 보여줘요.
+            &quot;선택하기&quot;를 누르면 Gemini가 그 영상을 보고 레시피를
+            정리해줘요.
+          </p>
+          <form onSubmit={handleYoutubeSearch} className="flex gap-2">
+            <input
+              value={ytQuery}
+              onChange={(e) => setYtQuery(e.target.value)}
+              placeholder="예: 된장찌개"
+              className="flex-1 rounded-xl border border-card-border bg-card px-3 py-2 text-sm"
+            />
+            <button
+              type="submit"
+              disabled={ytSearching}
+              className="rounded-full btn-3d bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-50"
+            >
+              {ytSearching ? "검색 중..." : "검색"}
+            </button>
+          </form>
+          {ytSearchError && (
+            <p className="text-sm text-red-600">{ytSearchError}</p>
+          )}
 
-            {ytResults.length > 0 && (
-              <ul className="flex flex-col gap-2">
-                {ytResults.map((v) => (
-                  <li
-                    key={v.videoId}
-                    className="flex items-center gap-3 rounded-xl border border-card-border bg-card p-3 shadow-sm"
+          {ytResults.length > 0 && (
+            <ul className="flex flex-col gap-2">
+              {ytResults.map((v) => (
+                <li
+                  key={v.videoId}
+                  className="flex items-center gap-3 rounded-xl border border-card-border bg-card p-3 shadow-sm"
+                >
+                  {v.thumbnailUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={v.thumbnailUrl}
+                      alt={v.title}
+                      className="h-16 w-24 shrink-0 rounded-lg object-cover"
+                    />
+                  )}
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="truncate text-sm font-medium">{v.title}</span>
+                    <span className="truncate text-xs text-muted">{v.channelTitle}</span>
+                  </div>
+                  <button
+                    onClick={() => handleSelectYoutubeVideo(v.videoId)}
+                    disabled={generating}
+                    className="shrink-0 rounded-full border border-card-border px-3 py-1.5 text-xs font-medium hover:border-accent hover:text-accent disabled:opacity-50"
                   >
-                    {v.thumbnailUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={v.thumbnailUrl}
-                        alt={v.title}
-                        className="h-16 w-24 shrink-0 rounded-lg object-cover"
-                      />
-                    )}
-                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="truncate text-sm font-medium">{v.title}</span>
-                      <span className="truncate text-xs text-muted">{v.channelTitle}</span>
-                    </div>
-                    <button
-                      onClick={() => handleSelectYoutubeVideo(v.videoId)}
-                      disabled={generating}
-                      className="shrink-0 rounded-full border border-card-border px-3 py-1.5 text-xs font-medium hover:border-accent hover:text-accent disabled:opacity-50"
-                    >
-                      {generating ? "분석 중..." : "선택하기"}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <details className="text-xs text-muted">
-            <summary className="cursor-pointer font-medium">
-              또는 유튜브 링크 직접 입력
-            </summary>
-            <form onSubmit={handleYoutubeExtract} className="mt-3 flex gap-2">
-              <input
-                value={youtubeUrl}
-                onChange={(e) => setYoutubeUrl(e.target.value)}
-                placeholder="https://www.youtube.com/watch?v=..."
-                className="flex-1 rounded-xl border border-card-border bg-card px-3 py-2 text-sm"
-              />
-              <button
-                type="submit"
-                disabled={generating}
-                className="rounded-full btn-3d bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-50"
-              >
-                {generating ? "분석 중..." : "분석"}
-              </button>
-            </form>
-          </details>
+                    {generating ? "분석 중..." : "선택하기"}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
 
           {generateError && <p className="text-sm text-red-600">{generateError}</p>}
         </div>
       )}
 
-      {(mode === "ai" || mode === "youtube") && generated && (
+      {mode === "youtube-link" && !generated && (
+        <div className="flex flex-col gap-4">
+          <p className="text-xs text-muted">
+            공개된 요리 유튜브 영상 링크를 넣으면 Gemini가 영상을 보고
+            레시피를 정리해줘요.
+          </p>
+          <form onSubmit={handleYoutubeExtract} className="flex gap-2">
+            <input
+              value={youtubeUrl}
+              onChange={(e) => setYoutubeUrl(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+              className="flex-1 rounded-xl border border-card-border bg-card px-3 py-2 text-sm"
+            />
+            <button
+              type="submit"
+              disabled={generating}
+              className="rounded-full btn-3d bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-50"
+            >
+              {generating ? "분석 중..." : "분석"}
+            </button>
+          </form>
+          {generateError && <p className="text-sm text-red-600">{generateError}</p>}
+        </div>
+      )}
+
+      {(mode === "ai" || mode === "youtube-search" || mode === "youtube-link") && generated && (
         <RecipeForm
           initial={{
             title: generated.title,
