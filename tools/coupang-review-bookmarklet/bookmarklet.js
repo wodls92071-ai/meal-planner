@@ -128,30 +128,55 @@
     return { src, cell };
   });
 
+  const status = document.createElement("div");
+  status.style.cssText = "margin:8px 0;font-size:13px";
   async function download() {
+    status.textContent = "";
+    const failed = [];
+    let ok = 0;
     let i = 0;
     for (const src of picked) {
       i++;
+      status.textContent = `다운로드 중… ${i}/${picked.size}`;
       try {
         const big = src.replace(/\/thumbnails\/remote\/\d+x\d+(ex|q\d+)?/, "/thumbnails/remote/800x800ex");
         let r = await fetch(big).catch(() => null);
         if (!r || !r.ok) r = await fetch(src);
+        if (!r.ok) throw new Error("HTTP " + r.status);
         const blob = await r.blob();
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
         a.download = `review-${id}-${i}.jpg`;
+        document.body.appendChild(a);
         a.click();
-        URL.revokeObjectURL(a.href);
-      } catch {
-        // 브라우저가 직접 저장을 막으면 새 탭으로 열어 우클릭/길게 눌러 저장
-        window.open(src, "_blank");
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        ok++;
+      } catch (e) {
+        failed.push({ src, err: String(e) });
       }
-      await new Promise((r) => setTimeout(r, 400));
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    status.textContent = `완료: ${ok}장 저장 요청, ${failed.length}장 실패`;
+    if (ok) status.textContent += " (브라우저가 '여러 파일 다운로드' 허용을 물으면 허용해 주세요)";
+    if (failed.length) {
+      const p = document.createElement("div");
+      p.style.cssText = "margin-top:6px;font-size:13px";
+      p.append(`브라우저가 직접 저장을 막은 사진이에요 (${failed[0].err}). 링크를 눌러 새 탭에서 연 뒤 우클릭 → 이미지를 다른 이름으로 저장:`);
+      failed.forEach(({ src }, n) => {
+        const l = document.createElement("a");
+        l.href = src;
+        l.target = "_blank";
+        l.rel = "noreferrer";
+        l.textContent = ` [${n + 1}번 열기]`;
+        p.append(l);
+      });
+      status.append(p);
     }
   }
 
   const ver = document.createElement("span");
-  ver.textContent = "[v4]";
+  ver.textContent = "[v5]";
   ver.style.cssText = "color:#e8590c;font-weight:bold";
   bar.append(
     ver,
@@ -169,7 +194,7 @@
     count,
   );
   update();
-  box.append(bar);
+  box.append(bar, status);
   if (!urls.length) {
     const d = document.createElement("pre");
     d.style.cssText = "white-space:pre-wrap;font-size:12px;background:#f3f3f3;padding:8px;margin-top:12px";
