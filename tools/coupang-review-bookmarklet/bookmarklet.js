@@ -175,8 +175,25 @@
     }
   }
 
+  function openCollected() {
+    const list = [...picked];
+    if (!list.length) return alert("먼저 사진을 선택해 주세요.");
+    const w = window.open("", "_blank");
+    if (!w) return alert("팝업이 막혔어요. 주소창 오른쪽의 팝업 차단 아이콘에서 허용해 주세요.");
+    const esc = (u) => u.replace(/"/g, "&quot;");
+    w.document.write(
+      `<!doctype html><meta charset="utf-8"><title>선택한 리뷰 사진 ${list.length}장</title>` +
+      `<body style="margin:0;font:15px sans-serif"><div style="padding:12px;background:#fff3e8">` +
+      `<b>Ctrl+S</b> (맥: ⌘+S) → 형식을 <b>"웹페이지, 완전"</b>으로 저장하면 사진이 <b>폴더 안에 한꺼번에</b> 저장돼요. ` +
+      `한 장씩은 사진 우클릭 → "이미지를 다른 이름으로 저장".</div>` +
+      list.map((u) => `<img src="${esc(u)}" referrerpolicy="no-referrer" style="display:block;max-width:100%;margin:8px auto">`).join("") +
+      `</body>`,
+    );
+    w.document.close();
+  }
+
   const ver = document.createElement("span");
-  ver.textContent = "[v5]";
+  ver.textContent = "[v6]";
   ver.style.cssText = "color:#e8590c;font-weight:bold";
   bar.append(
     ver,
@@ -190,6 +207,7 @@
       update();
     }),
     mk("선택 다운로드", download),
+    mk("선택한 사진 새 탭에 모으기", openCollected),
     mk("닫기", () => box.remove()),
     count,
   );
