@@ -49,8 +49,38 @@
     if (!res.ok || !added) break;
   }
   // 현재 열려 있는 페이지에 이미 보이는 리뷰 사진도 함께 수집
-  const fromPage = grab(document);
-  debug.push(`현재 페이지에서 추가로 ${fromPage}장`);
+
+  // 현재 페이지(및 같은 출처 iframe)에 보이는 이미지를 직접 수집 — 크기가 작은 아이콘은 제외
+  const key = (u) => u.replace(/\/thumbnails\/remote\/\d+x\d+(ex|q\d+)?/, "").replace(/[?#].*$/, "");
+  const liveSeen = new Set(urls.map(key));
+  const roots = [document];
+  document.querySelectorAll("iframe").forEach((f) => {
+    try { if (f.contentDocument) roots.push(f.contentDocument); } catch {}
+  });
+  let liveAdded = 0;
+  const addLive = (src) => {
+    if (!src) return;
+    if (src.startsWith("//")) src = "https:" + src;
+    if (!/^https?:/.test(src) || !/coupang/i.test(src)) return;
+    if (/\.(svg|gif)(\?|$)|sprite|icon|logo|badge|profile|banner/i.test(src)) return;
+    const k = key(src);
+    if (liveSeen.has(k)) return;
+    liveSeen.add(k);
+    urls.push(src.replace(/\/thumbnails\/remote\/\d+x\d+(ex|q\d+)?/, "/thumbnails/remote/800x800ex"));
+    liveAdded++;
+  };
+  for (const root of roots) {
+    root.querySelectorAll("img").forEach((img) => {
+      const w = img.naturalWidth || img.width || 0;
+      if (w && w < 60) return;
+      addLive(img.getAttribute("data-origin-path") || img.getAttribute("data-src") || img.currentSrc || img.src);
+    });
+    root.querySelectorAll("[style*='background']").forEach((el) => {
+      const m = (el.getAttribute("style") || "").match(/url\(["']?([^"')]+)/);
+      if (m) addLive(m[1]);
+    });
+  }
+  debug.push(`화면에서 직접 수집: ${liveAdded}장 (iframe ${roots.length - 1}개)`);
 
   const picked = new Set();
   box.textContent = "";
