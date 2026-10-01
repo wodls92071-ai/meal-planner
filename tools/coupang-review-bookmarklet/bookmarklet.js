@@ -134,7 +134,11 @@
     }
   }
 
+  const ver = document.createElement("span");
+  ver.textContent = "[v3]";
+  ver.style.cssText = "color:#e8590c;font-weight:bold";
   bar.append(
+    ver,
     mk("전체 선택/해제", () => {
       const all = picked.size !== urls.length;
       cells.forEach(({ src, cell }) => {
