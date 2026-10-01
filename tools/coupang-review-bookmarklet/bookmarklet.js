@@ -66,10 +66,23 @@
     const k = key(src);
     if (liveSeen.has(k)) return;
     liveSeen.add(k);
-    urls.push(src.replace(/\/thumbnails\/remote\/\d+x\d+(ex|q\d+)?/, "/thumbnails/remote/800x800ex"));
+    urls.push(src);
     liveAdded++;
   };
+  // 리뷰 영역 찾기: "도움이 됐어요" 버튼들을 모두 포함하는 가장 가까운 공통 조상
+  const marks = [];
   for (const root of roots) {
+    root.querySelectorAll("button,span,a,div").forEach((el) => {
+      if (el.children.length === 0 && /도움이 됐어요|도움이 돼요/.test(el.textContent || "")) marks.push(el);
+    });
+  }
+  let region = null;
+  if (marks.length) {
+    region = marks[0].parentElement;
+    while (region && !marks.every((m) => region.contains(m))) region = region.parentElement;
+  }
+  debug.push(`리뷰 영역: ${region ? "찾음 (리뷰 " + marks.length + "개)" : "못 찾음 → 페이지 전체"}`);
+  for (const root of region ? [region] : roots) {
     root.querySelectorAll("img").forEach((img) => {
       const w = img.naturalWidth || img.width || 0;
       if (w && w < 60) return;
@@ -120,7 +133,10 @@
     for (const src of picked) {
       i++;
       try {
-        const blob = await (await fetch(src)).blob();
+        const big = src.replace(/\/thumbnails\/remote\/\d+x\d+(ex|q\d+)?/, "/thumbnails/remote/800x800ex");
+        let r = await fetch(big).catch(() => null);
+        if (!r || !r.ok) r = await fetch(src);
+        const blob = await r.blob();
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
         a.download = `review-${id}-${i}.jpg`;
@@ -135,7 +151,7 @@
   }
 
   const ver = document.createElement("span");
-  ver.textContent = "[v3]";
+  ver.textContent = "[v4]";
   ver.style.cssText = "color:#e8590c;font-weight:bold";
   bar.append(
     ver,
