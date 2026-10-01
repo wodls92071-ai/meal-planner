@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ProfileForm } from "@/components/ProfileForm";
 import { SetPasswordRow } from "@/components/SetPasswordRow";
+import Link from "next/link";
 import { signOut } from "@/app/actions";
 import type { Profile } from "@/types/database";
 
@@ -32,6 +33,18 @@ export default async function ProfilePage() {
 
       <div className="flex flex-col divide-y divide-card-border rounded-2xl border border-card-border bg-card px-4 shadow-sm">
         <SetPasswordRow />
+        <Link
+          href="/review-images"
+          className="flex w-full items-center justify-between px-1 py-3.5 text-sm transition-colors hover:text-accent"
+        >
+          <span className="flex items-center gap-3">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-soft text-base">
+              🖼️
+            </span>
+            쿠팡 리뷰 이미지 저장
+          </span>
+          <span className="text-muted">›</span>
+        </Link>
         <form action={signOut} className="contents">
           <button
             type="submit"
