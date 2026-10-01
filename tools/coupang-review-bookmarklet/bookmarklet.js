@@ -13,17 +13,14 @@
 
   const urls = [];
   const seen = new Set();
-  for (let page = 1; page <= 10; page++) {
-    const res = await fetch(
-      `/vp/product/reviews?productId=${id}&page=${page}&size=30&sortBy=ORDER_SCORE_ASC&ratings=&q=&viRoleCode=3&ratingSummary=true`,
-      { credentials: "include" },
-    );
-    if (!res.ok) break;
-    const doc = new DOMParser().parseFromString(await res.text(), "text/html");
+  const debug = [];
+  const grab = (root) => {
     let added = 0;
-    doc.querySelectorAll("img").forEach((img) => {
+    root.querySelectorAll("img").forEach((img) => {
       let src = img.getAttribute("data-origin-path") || img.getAttribute("data-src") || img.getAttribute("src") || "";
-      if (!/coupangcdn\.com/.test(src) || !/review|attachment|\/image\//i.test(img.outerHTML)) return;
+      if (!/coupangcdn\.com/.test(src)) return;
+      if (!/review|attachment|vendor_inventory|\/image\//i.test(img.outerHTML)) return;
+      if (/profile|icon|badge|logo|sprite/i.test(src)) return;
       if (src.startsWith("//")) src = "https:" + src;
       src = src.replace(/\/thumbnails\/remote\/\d+x\d+(ex|q\d+)?/, "/thumbnails/remote/800x800ex");
       if (seen.has(src)) return;
@@ -31,8 +28,29 @@
       urls.push(src);
       added++;
     });
-    if (!added) break;
+    return added;
+  };
+  for (let page = 1; page <= 10; page++) {
+    let res;
+    try {
+      res = await fetch(
+        `/vp/product/reviews?productId=${id}&page=${page}&size=30&sortBy=ORDER_SCORE_ASC&ratings=&q=&viRoleCode=3&ratingSummary=true`,
+        { credentials: "include" },
+      );
+    } catch (e) {
+      debug.push(`page${page}: 요청 실패 ${e}`);
+      break;
+    }
+    const text = await res.text();
+    const doc = new DOMParser().parseFromString(text, "text/html");
+    const added = grab(doc);
+    debug.push(`page${page}: HTTP ${res.status}, ${text.length}자, img ${doc.querySelectorAll("img").length}개, 사진 ${added}장`);
+    if (page === 1 && !res.ok) debug.push("응답 앞부분: " + text.slice(0, 200).replace(/\s+/g, " "));
+    if (!res.ok || !added) break;
   }
+  // 현재 열려 있는 페이지에 이미 보이는 리뷰 사진도 함께 수집
+  const fromPage = grab(document);
+  debug.push(`현재 페이지에서 추가로 ${fromPage}장`);
 
   const picked = new Set();
   box.textContent = "";
@@ -102,6 +120,11 @@
   );
   update();
   box.append(bar);
-  if (!urls.length) box.append("사진이 있는 리뷰를 찾지 못했어요.");
+  if (!urls.length) {
+    const d = document.createElement("pre");
+    d.style.cssText = "white-space:pre-wrap;font-size:12px;background:#f3f3f3;padding:8px;margin-top:12px";
+    d.textContent = "사진이 있는 리뷰를 찾지 못했어요.\n\n[진단 정보 - 이 내용을 알려주세요]\n" + debug.join("\n");
+    box.append(d);
+  }
   box.append(grid);
 })();
