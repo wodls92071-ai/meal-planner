@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>쿠팡 리뷰 이미지 북마클릿</title>
+<style>
+  body { font: 16px/1.6 sans-serif; max-width: 560px; margin: 40px auto; padding: 0 16px; }
+  a.btn { display: inline-block; padding: 12px 20px; background: #e8590c; color: #fff; border-radius: 10px; text-decoration: none; font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>쿠팡 리뷰 이미지 저장</h1>
+<ol>
+  <li>북마크바가 안 보이면 <b>Ctrl+Shift+B</b> (맥: ⌘+Shift+B)로 켜세요.</li>
+  <li>아래 주황색 버튼을 <b>북마크바로 드래그</b>하세요. (클릭 말고 끌어다 놓기)</li>
+  <li>쿠팡 상품 페이지를 열고 그 북마크를 클릭하세요.</li>
+  <li>리뷰 사진이 뜨면 원하는 것을 눌러 선택 → <b>선택 다운로드</b></li>
+</ol>
+<p><a class="btn" id="bm" href="#">쿠팡 리뷰 사진 저장</a></p>
+<script>
+  document.getElementById("bm").href = "javascript:" + encodeURIComponent("(async () => {\n  const old = document.getElementById(\"cpg-rv-overlay\");\n  if (old) old.remove();\n  const id = location.pathname.match(/\\/vp\\/products\\/(\\d+)/)?.[1];\n  if (!id) return alert(\"쿠팡 상품 페이지에서 눌러주세요.\");\n\n  const box = document.createElement(\"div\");\n  box.id = \"cpg-rv-overlay\";\n  box.style.cssText =\n    \"position:fixed;inset:0;z-index:2147483647;background:#fff;overflow:auto;padding:16px;font:14px sans-serif;color:#111\";\n  box.textContent = \"리뷰 사진 불러오는 중…\";\n  document.body.appendChild(box);\n\n  const urls = [];\n  const seen = new Set();\n  for (let page = 1; page <= 10; page++) {\n    const res = await fetch(\n      `/vp/product/reviews?productId=${id}&page=${page}&size=30&sortBy=ORDER_SCORE_ASC&ratings=&q=&viRoleCode=3&ratingSummary=true`,\n      { credentials: \"include\" },\n    );\n    if (!res.ok) break;\n    const doc = new DOMParser().parseFromString(await res.text(), \"text/html\");\n    let added = 0;\n    doc.querySelectorAll(\"img\").forEach((img) => {\n      let src = img.getAttribute(\"data-origin-path\") || img.getAttribute(\"data-src\") || img.getAttribute(\"src\") || \"\";\n      if (!/coupangcdn\\.com/.test(src) || !/review|attachment|\\/image\\//i.test(img.outerHTML)) return;\n      if (src.startsWith(\"//\")) src = \"https:\" + src;\n      src = src.replace(/\\/thumbnails\\/remote\\/\\d+x\\d+(ex|q\\d+)?/, \"/thumbnails/remote/800x800ex\");\n      if (seen.has(src)) return;\n      seen.add(src);\n      urls.push(src);\n      added++;\n    });\n    if (!added) break;\n  }\n\n  const picked = new Set();\n  box.textContent = \"\";\n  const bar = document.createElement(\"div\");\n  bar.style.cssText = \"position:sticky;top:0;background:#fff;padding:8px 0;display:flex;gap:8px;align-items:center;z-index:1\";\n  const count = document.createElement(\"span\");\n  const mk = (label, fn) => {\n    const b = document.createElement(\"button\");\n    b.textContent = label;\n    b.style.cssText = \"padding:6px 12px;border:1px solid #888;border-radius:8px;background:#f5f5f5;cursor:pointer\";\n    b.onclick = fn;\n    return b;\n  };\n  const update = () => (count.textContent = `${urls.length}장 중 ${picked.size}장 선택`);\n  const grid = document.createElement(\"div\");\n  grid.style.cssText = \"display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:8px\";\n\n  const cells = urls.map((src) => {\n    const cell = document.createElement(\"div\");\n    cell.style.cssText = \"position:relative;aspect-ratio:1;border:3px solid transparent;border-radius:8px;overflow:hidden;cursor:pointer\";\n    const im = document.createElement(\"img\");\n    im.src = src;\n    im.style.cssText = \"width:100%;height:100%;object-fit:cover\";\n    cell.appendChild(im);\n    cell.onclick = () => {\n      if (picked.has(src)) picked.delete(src);\n      else picked.add(src);\n      cell.style.borderColor = picked.has(src) ? \"#e8590c\" : \"transparent\";\n      update();\n    };\n    grid.appendChild(cell);\n    return { src, cell };\n  });\n\n  async function download() {\n    let i = 0;\n    for (const src of picked) {\n      i++;\n      try {\n        const blob = await (await fetch(src)).blob();\n        const a = document.createElement(\"a\");\n        a.href = URL.createObjectURL(blob);\n        a.download = `review-${id}-${i}.jpg`;\n        a.click();\n        URL.revokeObjectURL(a.href);\n      } catch {\n        // 브라우저가 직접 저장을 막으면 새 탭으로 열어 우클릭/길게 눌러 저장\n        window.open(src, \"_blank\");\n      }\n      await new Promise((r) => setTimeout(r, 400));\n    }\n  }\n\n  bar.append(\n    mk(\"전체 선택/해제\", () => {\n      const all = picked.size !== urls.length;\n      cells.forEach(({ src, cell }) => {\n        if (all) picked.add(src);\n        else picked.delete(src);\n        cell.style.borderColor = all ? \"#e8590c\" : \"transparent\";\n      });\n      update();\n    }),\n    mk(\"선택 다운로드\", download),\n    mk(\"닫기\", () => box.remove()),\n    count,\n  );\n  update();\n  box.append(bar);\n  if (!urls.length) box.append(\"사진이 있는 리뷰를 찾지 못했어요.\");\n  box.append(grid);\n})();\n");
+</script>
+</body>
+</html>
