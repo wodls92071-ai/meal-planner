@@ -1,0 +1,16 @@
+{
+  "name": "coupang-shorts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "쿠팡 파트너스 상품 검색 → 수익 링크 생성 → 쇼츠(mp4) 자동 제작",
+  "type": "module",
+  "engines": {
+    "node": ">=22.9"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/index.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.134.0"
+  }
+}

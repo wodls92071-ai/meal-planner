@@ -1,0 +1,16 @@
+[
+  {
+    "name": "상품명 (쿠팡 상품 페이지 제목)",
+    "price": 19900,
+    "imageUrl": "https://thumbnail.coupangcdn.com/...jpg",
+    "link": "https://link.coupang.com/a/xxxxxx",
+    "category": "생활용품",
+    "isRocket": true
+  },
+  {
+    "name": "API 키가 있으면 url 만 넣어도 파트너스 링크로 자동 변환",
+    "price": 35000,
+    "imagePath": "./images/my-photo.jpg",
+    "url": "https://www.coupang.com/vp/products/1234567890"
+  }
+]

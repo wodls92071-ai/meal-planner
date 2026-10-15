@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 독립 Node 스크립트 (자체 package.json)
+    "tools/**",
   ]),
 ]);
 
