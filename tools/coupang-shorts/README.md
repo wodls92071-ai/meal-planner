@@ -3,7 +3,7 @@
 쿠팡 상품을 찾아 **쿠팡 파트너스 수익 링크**를 만들고, 상품 소개 **쇼츠 영상(1080×1920 mp4)** 과 업로드용 설명란까지 자동으로 만들어 주는 스크립트입니다.
 
 ```
-상품 검색(파트너스 API) → 상품 이미지 다운로드 → Claude 대본 작성 → Google TTS 나레이션 → ffmpeg 합성
+상품 검색(파트너스 API) → 상품 이미지 다운로드 → 대본(직접 작성 / Claude / 기본 템플릿) → Google TTS 나레이션 → ffmpeg 합성
 ```
 
 ## 1. 쿠팡 파트너스 가입 (본인이 직접)
@@ -24,7 +24,7 @@
 - Node.js 22.9 이상
 - ffmpeg (`brew install ffmpeg` / `winget install ffmpeg` / `sudo apt install ffmpeg`)
 - 한글 폰트 (자동 탐색됩니다. 못 찾으면 `.env` 의 `FONT_PATH` 지정)
-- [Anthropic API 키](https://console.anthropic.com) (대본 작성)
+- [Anthropic API 키](https://console.anthropic.com) (선택. 대본을 직접 쓰면 필요 없음)
 - Google Cloud Text-to-Speech API 키 (나레이션, 선택)
 
 ```bash
@@ -51,6 +51,29 @@ npm start -- manual products.json
 # 영상 없이 대본·설명란만
 npm start -- search "캠핑 의자" --script-only
 ```
+
+### 대본 직접 쓰기
+
+[`script.example.txt`](script.example.txt) 처럼 텍스트 파일에 장면을 한 줄씩 적습니다.
+
+```
+제목: 자취생 필수템 무선 청소기
+설명: 가볍고 손목이 편한 무선 청소기예요.
+해시태그: #쿠팡 #청소기 #자취템
+
+원룸 청소 3분 컷 | 원룸 청소, 이거 하나면 3분이면 끝나요.
+지금 19만원대 | 지금 19만원대에 로켓배송까지 돼요.
+링크는 설명란! | 구매 링크는 설명란에 있어요.
+```
+
+장면 한 줄은 `화면 자막 | 읽어줄 대사` 입니다. 제목·설명·해시태그는 빼도 됩니다.
+
+```bash
+npm start -- search "무선 청소기" --script 청소기.txt   # 검색 1위 상품 + 내 대본
+```
+
+`manual` 모드에서는 상품마다 `"script": "청소기.txt"` 를 넣으면 됩니다.
+대본 우선순위는 **직접 쓴 대본 → Claude(ANTHROPIC_API_KEY 있을 때) → 기본 템플릿** 입니다.
 
 `manual` 모드 입력 형식은 [`products.example.json`](products.example.json) 을 참고하세요.
 `link` 에는 파트너스에서 만든 링크를 넣습니다. API 키가 있으면 `url`(일반 쿠팡 상품 주소)만 넣어도 파트너스 링크로 바꿔 줍니다.

@@ -5,7 +5,8 @@
     "imageUrl": "https://thumbnail.coupangcdn.com/...jpg",
     "link": "https://link.coupang.com/a/xxxxxx",
     "category": "생활용품",
-    "isRocket": true
+    "isRocket": true,
+    "script": "./script.example.txt"
   },
   {
     "name": "API 키가 있으면 url 만 넣어도 파트너스 링크로 자동 변환",

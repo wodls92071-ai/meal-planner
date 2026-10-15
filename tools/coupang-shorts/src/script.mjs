@@ -1,7 +1,7 @@
 // Claude 로 쇼츠 대본 생성
 import Anthropic from "@anthropic-ai/sdk";
 
-const client = new Anthropic();
+let client;
 
 const SCHEMA = {
   type: "object",
@@ -57,6 +57,7 @@ export async function writeScript(product, image) {
   }
   content.push({ type: "text", text: `다음 상품으로 쇼츠 대본을 써 주세요.\n\n${facts}` });
 
+  client ??= new Anthropic();
   const response = await client.beta.messages.create({
     model: "claude-opus-5-5",
     max_tokens: 16000,

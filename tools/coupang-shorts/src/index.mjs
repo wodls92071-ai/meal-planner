@@ -5,7 +5,7 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 
 import { deeplink, goldboxProducts, searchProducts } from "./coupang.mjs";
-import { writeScript } from "./script.mjs";
+import { loadScript, templateScript } from "./manual-script.mjs";
 import { synthesize, ttsEnabled } from "./tts.mjs";
 import { audioDuration, checkFfmpeg, renderShort } from "./video.mjs";
 
@@ -15,10 +15,12 @@ const USAGE = `사용법:
   npm start -- search "<키워드>" [--count 1] [--list]
   npm start -- goldbox [--count 1] [--list]
   npm start -- manual <products.json>
+  npm start -- search "<키워드>" --script 대본.txt
 
 옵션:
   --count N     상위 N개 상품으로 쇼츠 생성 (기본 1)
   --list        영상은 만들지 않고 검색 결과만 출력
+  --script FILE 직접 쓴 대본 파일 사용 (첫 번째 상품에 적용, 형식은 script.example.txt)
   --script-only 대본·설명란만 만들고 영상은 건너뜀
   --out DIR     결과 폴더 (기본 ./out)`;
 
@@ -28,6 +30,7 @@ async function main() {
     options: {
       count: { type: "string", default: "1" },
       list: { type: "boolean", default: false },
+      script: { type: "string" },
       "script-only": { type: "boolean", default: false },
       out: { type: "string", default: "out" },
       help: { type: "boolean", short: "h", default: false },
@@ -61,7 +64,8 @@ async function main() {
 
   if (!values["script-only"]) await checkFfmpeg();
 
-  for (const product of products.slice(0, count)) {
+  for (const [i, product] of products.slice(0, count).entries()) {
+    if (i === 0 && values.script) product.scriptPath = path.resolve(values.script);
     const dir = await makeShort(product, values);
     console.log(`\n✅ 완료: ${dir}`);
   }
@@ -87,6 +91,7 @@ async function loadManual(file) {
       price: p.price,
       imageUrl: p.imageUrl,
       imagePath: p.imagePath && path.resolve(base, p.imagePath),
+      scriptPath: p.script && path.resolve(base, p.script),
       link,
       category: p.category ?? "",
       isRocket: Boolean(p.isRocket),
@@ -102,6 +107,21 @@ async function loadImage(product) {
   return Buffer.from(await res.arrayBuffer());
 }
 
+// 대본 우선순위: 직접 쓴 대본 파일 → Claude (ANTHROPIC_API_KEY 있을 때) → 기본 템플릿
+async function getScript(product, image) {
+  if (product.scriptPath) {
+    console.log(`  · 대본 파일 사용: ${product.scriptPath}`);
+    return loadScript(product.scriptPath, product);
+  }
+  if (process.env.ANTHROPIC_API_KEY) {
+    console.log("  · 대본 작성 중 (Claude)…");
+    const { writeScript } = await import("./script.mjs");
+    return writeScript(product, image);
+  }
+  console.log("  · 대본 파일도 ANTHROPIC_API_KEY 도 없어 기본 템플릿 대본을 씁니다. (--script 로 직접 쓴 대본을 넣을 수 있어요)");
+  return templateScript(product);
+}
+
 async function makeShort(product, options) {
   const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const dir = path.resolve(options.out, `${stamp}-${product.productId}`);
@@ -113,8 +133,7 @@ async function makeShort(product, options) {
   await fs.writeFile(path.join(work, "product.img"), image);
   await fs.writeFile(path.join(dir, "product.json"), JSON.stringify(product, null, 2));
 
-  console.log("  · 대본 작성 중 (Claude)…");
-  const script = await writeScript(product, image);
+  const script = await getScript(product, image);
   await fs.writeFile(path.join(dir, "script.json"), JSON.stringify(script, null, 2));
 
   const description = [
