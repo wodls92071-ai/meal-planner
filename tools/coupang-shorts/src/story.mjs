@@ -17,11 +17,12 @@ const W = 1080;
 const H = 1920;
 const COLORS = {
   band: "#F9D5CC",
-  coverBand: "#3B3B39",
+  coverBand: "#3C3734",
+  coverTitleBand: "#4B4842",
   ink: "#111111",
   gray: "#8A8A8A",
   highlight: "#F04E2B",
-  coverHighlight: "#FF8A5B",
+  coverHighlight: "#F9B29B",
   placeholder: "#F4EFEA",
 };
 const DISCLOSURE = "가상 상황극 · 쿠팡 파트너스 활동으로 수수료를 제공받을 수 있습니다";
@@ -32,7 +33,14 @@ function registerFonts() {
   GlobalFonts.registerFromPath(path.join(dir, "Pretendard-Black.otf"), "PretendardBlack");
   GlobalFonts.registerFromPath(path.join(dir, "Pretendard-ExtraBold.otf"), "PretendardExtraBold");
   GlobalFonts.registerFromPath(path.join(dir, "Pretendard-Medium.otf"), "PretendardMedium");
+  // 채널 이름·표지 제목은 Black Han Sans, 글 제목·자막은 Do Hyeon (fonts/, OFL)
+  const fonts = path.join(ROOT, "fonts");
+  GlobalFonts.registerFromPath(path.join(fonts, "BlackHanSans-Regular.ttf"), "BlackHanSans");
+  GlobalFonts.registerFromPath(path.join(fonts, "DoHyeon-Regular.ttf"), "DoHyeon");
 }
+
+const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), "..");
+const AVATAR = path.join(ROOT, "assets/avatar.png");
 
 /**
  * 대본 형식 (story.example.txt 참고)
@@ -151,9 +159,17 @@ function drawPlaceholder(ctx, x, y, w, h, note) {
   ctx.textAlign = "left";
 }
 
-async function sceneImage(ctx, file, baseDir, box, note) {
+// 박스 안에 잘리지 않게 맞추고 위쪽·가운데 정렬 (장면 그림은 가로 꽉, 정사각 제품 사진은 가운데)
+function drawImageContain(ctx, img, x, y, w, h) {
+  const scale = Math.min(w / img.width, h / img.height);
+  const dw = img.width * scale;
+  ctx.drawImage(img, x + (w - dw) / 2, y, dw, img.height * scale);
+}
+
+async function sceneImage(ctx, file, baseDir, box, note, { fit = "cover" } = {}) {
   const p = file && path.resolve(baseDir, file);
-  if (p && existsSync(p)) drawImageCover(ctx, await loadImage(p), ...box);
+  const draw = fit === "contain" ? drawImageContain : drawImageCover;
+  if (p && existsSync(p)) draw(ctx, await loadImage(p), ...box);
   else drawPlaceholder(ctx, ...box, note || file);
 }
 
@@ -165,14 +181,14 @@ function drawDisclosure(ctx, color = COLORS.gray) {
   ctx.textAlign = "left";
 }
 
-function drawHeader(ctx, story) {
+function drawHeader(ctx, story, avatar) {
   ctx.fillStyle = COLORS.band;
   ctx.fillRect(0, 0, W, 236);
   drawChevron(ctx, 108, 118, COLORS.ink);
   drawPaw(ctx, 924, 128, COLORS.ink);
   ctx.textAlign = "center";
   ctx.fillStyle = COLORS.ink;
-  ctx.font = fitFont(ctx, story.channel, "PretendardBlack", 96, 560);
+  ctx.font = fitFont(ctx, story.channel, "BlackHanSans", 96, 560);
   ctx.fillText(story.channel, W / 2, 152);
   ctx.textAlign = "left";
 
@@ -181,34 +197,38 @@ function drawHeader(ctx, story) {
   ctx.fillRect(0, 236, W, 284);
   ctx.fillStyle = COLORS.band;
   ctx.fillRect(85, 267, 140, 128);
-  ctx.textAlign = "center";
+  if (avatar) ctx.drawImage(avatar, 85, 267, 140, 128);
+  else {
+    ctx.textAlign = "center";
+    ctx.fillStyle = COLORS.ink;
+    ctx.font = "72px BlackHanSans";
+    ctx.fillText([...story.channel][0] ?? "", 155, 357);
+    ctx.textAlign = "left";
+  }
   ctx.fillStyle = COLORS.ink;
-  ctx.font = "72px PretendardBlack";
-  ctx.fillText([...story.channel][0] ?? "", 155, 357);
-  ctx.textAlign = "left";
-  ctx.font = "52px PretendardBlack";
+  ctx.font = "52px BlackHanSans";
   ctx.fillText(story.channel, 252, 318);
   ctx.fillStyle = COLORS.gray;
   ctx.font = "30px PretendardMedium";
-  ctx.fillText(`${story.channel}  |  가상 상황극`, 252, 382);
+  ctx.fillText(`${story.channel}  |  02:09  |  댓글 9999`, 252, 382);
   ctx.fillStyle = COLORS.ink;
-  ctx.font = fitFont(ctx, story.postTitle, "PretendardBlack", 66, W - 170);
+  ctx.font = fitFont(ctx, story.postTitle, "DoHyeon", 66, W - 170);
   ctx.fillText(story.postTitle, 85, 468);
   ctx.fillStyle = "#333333";
   ctx.fillRect(0, 517, W, 3);
 }
 
-async function renderCutFrame(story, cut, visibleLines, baseDir) {
+async function renderCutFrame(story, cut, visibleLines, baseDir, avatar) {
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext("2d");
   ctx.fillStyle = "#FFFFFF";
   ctx.fillRect(0, 0, W, H);
-  drawHeader(ctx, story);
+  drawHeader(ctx, story, avatar);
   cut.lines.slice(0, visibleLines).forEach((line, i) => {
-    const font = fitFont(ctx, line, "PretendardBlack", 64, W - 120);
+    const font = fitFont(ctx, line, "DoHyeon", 66, W - 120);
     drawRichLine(ctx, line, W / 2, 632 + i * 92, { font, color: COLORS.ink, hlColor: COLORS.highlight });
   });
-  await sceneImage(ctx, cut.image, baseDir, [0, 880, W, 820], cut.note);
+  await sceneImage(ctx, cut.image, baseDir, [0, 790, W, 820], cut.note, { fit: "contain" });
   drawDisclosure(ctx);
   return canvas.encode("png");
 }
@@ -218,35 +238,57 @@ async function renderCoverFrame(story, baseDir) {
   const ctx = canvas.getContext("2d");
   ctx.fillStyle = COLORS.coverBand;
   ctx.fillRect(0, 0, W, H);
-  drawChevron(ctx, 108, 118, "#FFFFFF");
-  drawPaw(ctx, 924, 128, "#FFFFFF");
+  drawChevron(ctx, 108, 118, COLORS.ink);
+  drawPaw(ctx, 924, 128, COLORS.ink);
+  ctx.fillStyle = COLORS.coverTitleBand;
+  ctx.fillRect(0, 236, W, 328);
   story.cover.forEach((line, i) => {
-    const font = fitFont(ctx, line, "PretendardBlack", 116, W - 120);
-    ctx.textAlign = "left";
+    const font = fitFont(ctx, line, "BlackHanSans", 124, W - 120);
     ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,0.45)";
-    ctx.shadowBlur = 12;
-    drawRichLine(ctx, line, W / 2, 340 + i * 140, { font, color: "#FFFFFF", hlColor: COLORS.coverHighlight });
+    ctx.shadowColor = "rgba(0,0,0,0.55)";
+    ctx.shadowOffsetX = 6;
+    ctx.shadowOffsetY = 6;
+    drawRichLine(ctx, line, W / 2, 358 + i * 136, { font, color: "#FFFFFF", hlColor: COLORS.coverHighlight });
     ctx.restore();
   });
-  ctx.fillStyle = "#FFFFFF";
-  ctx.fillRect(0, 560, W, 120);
+  // 글 제목 띠 (위아래로 살짝 그림자)
+  ctx.fillStyle = "#111111";
+  ctx.fillRect(0, 564, W, 3);
+  const band = ctx.createLinearGradient(0, 567, 0, 692);
+  band.addColorStop(0, "#C6C4C1");
+  band.addColorStop(0.15, "#F3F5F5");
+  band.addColorStop(0.8, "#EDEDED");
+  band.addColorStop(1, "#BBBBB9");
+  ctx.fillStyle = band;
+  ctx.fillRect(0, 567, W, 125);
   ctx.textAlign = "center";
   ctx.fillStyle = COLORS.ink;
-  ctx.font = fitFont(ctx, story.postTitle, "PretendardBlack", 58, W - 120);
-  ctx.fillText(story.postTitle, W / 2, 642);
+  ctx.font = fitFont(ctx, story.postTitle, "DoHyeon", 62, W - 120);
+  ctx.fillText(story.postTitle, W / 2, 652);
   ctx.textAlign = "left";
-  await sceneImage(ctx, story.coverImage, baseDir, [0, 680, W, 1100], "표지 이미지 (음식 사진 추천)");
+  await sceneImage(ctx, story.coverImage, baseDir, [0, 700, W, 1060], "표지 이미지 (음식 사진 추천)");
   drawDisclosure(ctx, "#DDDDDD");
   return canvas.encode("png");
+}
+
+async function loadVoices(dir, expected) {
+  const files = (await fs.readdir(dir))
+    .map((f) => ({ f, n: Number(f.match(/^audio_(\d+)_/)?.[1]) }))
+    .filter((v) => Number.isInteger(v.n))
+    .sort((a, b) => a.n - b.n)
+    .map((v) => path.join(dir, v.f));
+  if (files.length !== expected) {
+    throw new Error(`${dir} 의 음성 파일이 ${files.length}개입니다. 표지 1개 + 장면 ${expected - 1}개 = ${expected}개가 필요합니다.`);
+  }
+  return files;
 }
 
 /**
  * @param {string} scriptFile 대본 파일
  * @param {string} outDir     결과 폴더
- * @param {{bgm?: string}} options
+ * @param {{bgm?: string, tempo?: number}} options
  */
-export async function makeStoryShort(scriptFile, outDir, { bgm } = {}) {
+export async function makeStoryShort(scriptFile, outDir, { bgm, tempo = 1.3 } = {}) {
   registerFonts();
   const baseDir = path.dirname(path.resolve(scriptFile));
   const story = parseStory(await fs.readFile(scriptFile, "utf8"));
@@ -256,17 +298,30 @@ export async function makeStoryShort(scriptFile, outDir, { bgm } = {}) {
   const frames = []; // {file, duration}
   const audio = []; // {file|null, duration}
 
-  const coverDuration = 1.6;
+  // 직접 받은 나레이션: <대본이름>/voice/ 에 Typecast "문장 별로 나누기" mp3 (audio_0_ = 표지, audio_N_ = N번째 장면)
+  const voiceDir = path.join(baseDir, path.basename(scriptFile).replace(/\.[^.]+$/, ""), "voice");
+  const voices = existsSync(voiceDir) ? await loadVoices(voiceDir, story.cuts.length + 1) : null;
+  const speedUp = async (index, id) => {
+    const out = `narration_${id}.m4a`;
+    await run("ffmpeg", ["-y", "-loglevel", "error", "-i", voices[index], "-filter:a", `atempo=${tempo}`, path.join(work, out)]);
+    return { file: out, duration: (await audioDuration(path.join(work, out))) + 0.15 };
+  };
+
+  const cover = voices ? await speedUp(0, "cover") : { file: null, duration: 1.6 };
+  const coverDuration = Math.max(1.6, cover.duration);
   await fs.writeFile(path.join(work, "cover.png"), await renderCoverFrame(story, baseDir));
   frames.push({ file: "cover.png", duration: coverDuration });
-  audio.push({ file: null, duration: coverDuration });
+  audio.push({ file: cover.file, duration: coverDuration });
 
+  const avatar = existsSync(AVATAR) ? await loadImage(AVATAR) : null;
   const useTts = ttsEnabled();
   for (const [i, cut] of story.cuts.entries()) {
     const id = String(i).padStart(2, "0");
     let narration = null;
     let duration;
-    if (useTts) {
+    if (voices) {
+      ({ file: narration, duration } = await speedUp(i + 1, id));
+    } else if (useTts) {
       narration = `narration_${id}.mp3`;
       await synthesize(cut.narration, path.join(work, narration));
       duration = (await audioDuration(path.join(work, narration))) + 0.15;
@@ -277,7 +332,7 @@ export async function makeStoryShort(scriptFile, outDir, { bgm } = {}) {
     const steps = cut.lines.length;
     for (let s = 1; s <= steps; s++) {
       const file = `cut_${id}_${s}.png`;
-      await fs.writeFile(path.join(work, file), await renderCutFrame(story, cut, s, baseDir));
+      await fs.writeFile(path.join(work, file), await renderCutFrame(story, cut, s, baseDir, avatar));
       const share = steps === 1 ? 1 : s === 1 ? 0.4 : 0.6 / (steps - 1);
       frames.push({ file, duration: duration * share });
     }

@@ -24,7 +24,8 @@ const USAGE = `사용법:
   --list        영상은 만들지 않고 검색 결과만 출력
   --script FILE 직접 쓴 대본 파일 사용 (첫 번째 상품에 적용, 형식은 script.example.txt)
   --script-only 대본·설명란만 만들고 영상은 건너뜀
-  --out DIR     결과 폴더 (기본 ./out)`;
+  --out DIR     결과 폴더 (기본 ./out)
+  --tempo N     story: <대본이름>/voice/ 나레이션 배속 (기본 1.3)`;
 
 async function main() {
   const { positionals, values } = parseArgs({
@@ -36,6 +37,7 @@ async function main() {
       "script-only": { type: "boolean", default: false },
       out: { type: "string", default: "out" },
       bgm: { type: "string" },
+      tempo: { type: "string", default: "1.3" },
       help: { type: "boolean", short: "h", default: false },
     },
   });
@@ -46,7 +48,7 @@ async function main() {
     if (!arg) throw new Error(`대본 파일 경로를 입력하세요.\n\n${USAGE}`);
     await checkFfmpeg();
     const name = path.basename(arg).replace(/\.[^.]+$/, "");
-    const out = await makeStoryShort(arg, path.resolve(values.out, name), { bgm: values.bgm });
+    const out = await makeStoryShort(arg, path.resolve(values.out, name), { bgm: values.bgm, tempo: Number(values.tempo) });
     return console.log(`\n✅ 완료: ${out}`);
   }
 

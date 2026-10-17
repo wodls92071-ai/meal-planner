@@ -1,3 +1,5 @@
 node_modules/
 .env
 out/
+# 장면 이미지·나레이션 등 편별 미디어 (용량이 커서 로컬에만 둠)
+stories/*/
