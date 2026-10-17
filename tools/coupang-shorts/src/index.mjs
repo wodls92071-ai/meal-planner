@@ -6,6 +6,7 @@ import { parseArgs } from "node:util";
 
 import { deeplink, goldboxProducts, searchProducts } from "./coupang.mjs";
 import { loadScript, templateScript } from "./manual-script.mjs";
+import { makeStoryShort } from "./story.mjs";
 import { synthesize, ttsEnabled } from "./tts.mjs";
 import { audioDuration, checkFfmpeg, renderShort } from "./video.mjs";
 
@@ -16,6 +17,7 @@ const USAGE = `사용법:
   npm start -- goldbox [--count 1] [--list]
   npm start -- manual <products.json>
   npm start -- search "<키워드>" --script 대본.txt
+  npm start -- story <대본.txt> [--bgm 음악.mp3]   (가상 상황극 스타일, story.example.txt 참고)
 
 옵션:
   --count N     상위 N개 상품으로 쇼츠 생성 (기본 1)
@@ -33,11 +35,20 @@ async function main() {
       script: { type: "string" },
       "script-only": { type: "boolean", default: false },
       out: { type: "string", default: "out" },
+      bgm: { type: "string" },
       help: { type: "boolean", short: "h", default: false },
     },
   });
   const [command, arg] = positionals;
   if (values.help || !command) return console.log(USAGE);
+
+  if (command === "story") {
+    if (!arg) throw new Error(`대본 파일 경로를 입력하세요.\n\n${USAGE}`);
+    await checkFfmpeg();
+    const name = path.basename(arg).replace(/\.[^.]+$/, "");
+    const out = await makeStoryShort(arg, path.resolve(values.out, name), { bgm: values.bgm });
+    return console.log(`\n✅ 완료: ${out}`);
+  }
 
   const count = Math.max(1, Number(values.count) || 1);
   let products;

@@ -78,6 +78,20 @@ npm start -- search "무선 청소기" --script 청소기.txt   # 검색 1위 �
 `manual` 모드 입력 형식은 [`products.example.json`](products.example.json) 을 참고하세요.
 `link` 에는 파트너스에서 만든 링크를 넣습니다. API 키가 있으면 `url`(일반 쿠팡 상품 주소)만 넣어도 파트너스 링크로 바꿔 줍니다.
 
+## 가상 상황극 스타일 (story)
+
+채널 바, 커뮤니티 글 제목, 빨간 강조 자막(한 줄씩 등장), 장면 이미지로 구성된 쇼츠를 만듭니다.
+
+```bash
+npm start -- story stories/soondubu.txt              # 무음
+npm start -- story stories/soondubu.txt --bgm bgm.mp3 # 배경음악 (작게 깔림)
+```
+
+- 대본 형식: `stories/soondubu.txt` 참고. 장면 한 줄은 `자막 1줄 / 자막 2줄 **강조** | 이미지 파일 | 화면 설명` 입니다.
+- 이미지가 없는 장면은 "이미지 자리" 카드로 렌더링되니, 먼저 흐름을 확인한 뒤 이미지를 채우면 됩니다.
+- 장면 이미지는 `stories/chatgpt-prompts.md` 의 프롬프트로 ChatGPT에서 만들 수 있습니다. 제품 사진은 실제 상품 이미지를 쓰세요.
+- 결과물: `out/<대본이름>/short.mp4`, `description.txt`(설명란), `link-in-bio.txt`(인포크링크 등 프로필 링크용).
+
 ## 4. 결과물
 
 `out/<날짜>-<상품ID>/` 아래에 생깁니다.
